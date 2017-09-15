@@ -19,29 +19,39 @@
  */
 package org.sonar.plugins.xml;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.Closeable;
+import java.io.IOException;
 import org.junit.Test;
-import org.sonar.plugins.xml.parsers.LineCountParser;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-public class LineCountDataTest {
+public class UtilsTest {
 
   @Test
-  public void test_updateAccordingTo_a_delta() throws Exception {
-    Path path = Paths.get("src/test/resources/parsers/linecount/simple.xml");
-    Charset charset = StandardCharsets.UTF_8;
-    LineCountData data = new LineCountParser(Utils.contents(path, charset), charset).getLineCountData();
+  public void closeQuietly_closes_stream() throws Exception {
+    Closeable closeable = mock(Closeable.class);
 
-    data.updateAccordingTo(3);
+    Utils.closeQuietly(closeable);
 
-    assertThat(data.effectiveCommentLines()).containsOnly(6);
-    assertThat(data.linesNumber()).isEqualTo(21);
-    assertThat(data.linesOfCodeLines()).hasSize(15);
-    assertThat(data.linesOfCodeLines()).containsOnly(4, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21);
+    verify(closeable).close();
   }
 
+  @Test
+  public void closeQuietly_ignores_errors() throws Exception {
+    Closeable closeable = mock(Closeable.class);
+    doThrow(new IOException("foo")).when(closeable).close();
+
+    // no error
+    Utils.closeQuietly(closeable);
+
+    verify(closeable).close();
+  }
+
+  @Test
+  public void closeQuietly_ignores_null_parameter() {
+    // no error
+    Utils.closeQuietly(null);
+  }
 }
